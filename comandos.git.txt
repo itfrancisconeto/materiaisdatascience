@@ -1,0 +1,7 @@
+Comandos do GIT
+
+1) Criar o arquivo na pasta do repositorio
+2) Digitar o comando: git add nome.do.arquivo
+3) Digitar o comando: git commit -m "Escrever um comentário"
+4) Digitar o comando: git push
+5) Autenticar com o usuario/senha da conta do Git 
