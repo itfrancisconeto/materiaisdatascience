@@ -1,0 +1,518 @@
+###importar as bibliotecas
+import pandas as pd  #bibioteca responsável para o tratamento e limpeza dos dados
+import numpy as np #biblioteca utilizada para o tratamento eficiente de dados numéricos
+import datetime  #biblioteca utilizada para trabalhar com datas
+from matplotlib import pyplot as plt  #plotar gráficos
+import seaborn as sns #plotar gráficos
+
+#carregar dados para o pandas
+df_consultas=pd.read_csv(r'c:\temp\meu_arquivo.csv', sep=';')
+
+###inicio da analise exploratória
+
+#mostrar as dimensões do dataset
+df_consultas.shape
+
+#mostrar as primeiras instancias do dataset
+df_consultas.head()
+
+#mostrar as ultimas instancias do dataset
+df_consultas.tail()
+
+#mostrar as características dos atributos
+df_consultas.info()
+
+#mostrar a quantidade total de instancias do atributo com base em uma condição predefinida
+(df_consultas['nome_atributo']=='condicao').sum()
+
+#contar a quantidade de valores nulos
+df_consultas.isnull().sum()
+* alternativa: nans = df_consultas.isna().sum()
+  nans[nans > 0]
+
+#contar a quantidade de instancias de um atributo de forma agrupada
+df_consultas['nome_atributo'].value_counts()
+
+#obter o percentual da ocorrencia de determinado valor de instancia sobre o total de instancias do dataframe
+df_consultas['nome_atributo'].value_counts()['valor_instancia']/len(df_consultas)
+
+#exibir as estatísticas do dataset
+df_consultas.describe()
+
+#contar a quantidade de valores distintos em cada um dos atributos
+for atributos in list(df_consultas.columns):
+  print("{0:25} {1}".format(atributos, df_consultas[atributos].nunique()))
+  
+#exibe os valores unicos do atributo informado
+df_consultas['nome_atributo'].unique()
+
+#plotagem de correlação de determinados atributos
+df_consultas_corr = df_consultas[['nome_atributo','nome_atributo','nome_atributo']].copy()
+df_consultas_corr.corr()
+
+#plotagem de histograma de determinado atributo
+df_consultas['nome_atributo'].hist(bins=len(df_consultas['nome_atributo'].unique()))
+
+#plotagem de boxplot para identificar possíveis outliers
+df_consultas[['nome_atributo','nome_atributo']].boxplot()
+
+###inicio do tratamento dos dados
+
+#apagar as instancias nulas de um atributo
+df_consultas = df_consultas.dropna(subset = ['nome_atributo'])
+
+#apagar atributos selecionados do dataframe 
+drop = ["atrib_1", "atrib_2", "atrib_3", "atrib_4"]
+df_consultas.drop(drop, inplace=True, axis=1)
+
+#substituir os valores nulos de cada atributo pela media de suas instancias
+df_consultas = df_consultas.fillna(df_consultas.mean())
+* alternativa: df_consultas.fillna(df_consultas.mean(), inplace=True)
+
+#preencher os valores nulos do atributo com uma string nula
+df_consultas["nome_atributo"].fillna("", inplace=True) 
+
+# preencher os valores nulos com -1
+df_consultas.fillna(value=-1, inplace=True)
+
+#converter atributo para tipo datetime
+df_consultas['nome_atributo'] = pd.to_datetime(df_consultas['nome_atributo'])
+
+#transformar todos os dados categóricos do dataframe em one-hot-encoder
+df_consultas = pd.get_dummies(df_consultas)
+
+#normalizacao com MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler
+scaler = MinMaxScaler()
+df_x = df_consultas.drop('quality',axis=1)
+df_x_transformed = pd.DataFrame(scaler.fit_transform(df_x),columns=df_x.columns, index=df_x.index) 
+df_x_transformed.head()
+#atencao: o y (target) deve ser obtido do dataframe original (sem a normalização)
+#* alternativa
+#df_x_transformed = pd.DataFrame(scaler.fit_transform(df_consultas.iloc[:,:-1]))
+#df_x_transformed.head()
+
+###construindo modelos de previsao
+
+##aplicar um modelo de classificação via DecisionTreeClassifier
+#selecionar os dados para a construção da previsão
+entradas = ['atributos','de','entrada','preditores']
+saida=['target']
+x=df_consultas[entradas]
+y=df_consultas[saida]
+* alternativa:
+x = df_consultas.iloc[:,1:]
+y = df_consultas.iloc[:, 0]
+* alternativa DidaticaTech
+x = df_consultas.drop('target',axis=1)
+y = df_consultas['target']
+
+from sklearn.model_selection import train_test_split
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=1) 
+
+from sklearn.tree import DecisionTreeClassifier
+clf_arvore = DecisionTreeClassifier()
+
+#treinar o modelo
+clf_arvore.fit(x_train, y_train) 
+
+#realizar previsão com os dados de teste
+y_previsto = clf_arvore.predict(x_test) 
+
+#medir a acuracia do modelo sobre os dados de teste
+from sklearn.metrics import accuracy_score
+acuracia = accuracy_score(y_test, y_previsto)
+print('Acurácia da àrvore de Decisão: ',acuracia)
+
+#construir matriz de confusão
+from sklearn.metrics import classification_report, confusion_matrix
+matriz_confusao = confusion_matrix(y_test, y_previsto)
+print(matriz_confusao)
+
+#realiza o plot da matriz de confusão
+from mlxtend.plotting import plot_confusion_matrix
+fig, ax = plot_confusion_matrix(conf_mat=matriz_confusao)
+plt.show()
+
+#exibir relatorio de classificação
+print(classification_report(y_test,y_previsto))
+
+##aplicar um modelo de previsão via regressão linear
+#selecionar os dados para a construção da previsão
+x=df_consultas['nome_atributo'].values  #variável independente (preditora). Pode passar mais  de  uma se necessário Ex: x=df_consultas[['atrib_1','atrib_2']]
+Y=df_consultas['nome_atributo'].values #variável dependente (predita)
+
+#importar o modelo de regressão linear univariada
+from sklearn.linear_model import LinearRegression
+
+#realizar a construção do modelo de regressão
+reg= LinearRegression()
+x_Reshaped=x.reshape((-1, 1)) #coloca os dados no formato 2D (se necessário)
+regressao= reg.fit (x_Reshaped,Y) #encontra os coeficientes
+
+#realizar a previsão
+previsao=reg.predict(x_Reshaped)
+
+#analisar o modelo
+from sklearn.metrics import r2_score #método para o cálculo do R2 (coeficiente de determinação)
+
+#parâmetros encontrados
+print("Equação de regressão:", 'Y = {}X {}'.format(reg.coef_,reg.intercept_))
+R_2 = r2_score(Y, previsao)  #realiza o cálculo do R2
+print("Coeficiente de Determinação (R2):", R_2)
+
+#realizar o plot dos dados
+plt.figure(figsize=(4, 4), dpi=100)
+plt.scatter(x, Y,  color='gray') #realiza o plot do gráfico de dispersão
+plt.plot(x, previsao, color='red', linewidth=2) # realiza o plot da "linha"
+plt.xlabel("Rotulo Eixo X")
+plt.ylabel("Rotulo Eixo Y")
+plt.show()
+
+##aplicar um modelo de previsão via DecisionTreeRegressor
+#importar o modelo de regressão
+from sklearn.tree import DecisionTreeRegressor # Import Decision Tree Classifier
+reg= DecisionTreeRegressor()
+
+#treinar o modelo
+regressao= reg.fit (x,y) #encontra os coeficientes
+
+#realizar a previsão
+previsao=reg.predict(X)
+
+#parâmetros encontrados
+R_2 = r2_score(Y, previsao)  #realiza o cálculo do R2
+print("Coeficiente de Determinação (R2):", R_2)
+
+#aplicar um modelo de previsão via RandomForest
+from sklearn.ensemble import RandomForestClassifier
+clf_floresta = RandomForestClassifier(max_depth=10, random_state=1)
+
+#treinar o modelo
+clf_floresta.fit(x_train, y_train) 
+
+#realizar previsão com os dados de teste
+y_previsto = clf_floresta.predict(x_test) 
+
+#medir a acuracia do modelo sobre os dados de teste
+from sklearn.metrics import accuracy_score
+acuracia = accuracy_score(y_test, y_previsto)
+print('Acurácia do Random Forest: ',acuracia)
+
+#matriz de confusão melhor
+print(pd.crosstab(Y_teste,lr_predict_test,rownames=['Real'],colnames=['Predito'],margins=True))
+
+#adicionar coluna no dataframe mediante condição
+df_consultas = df_origem[['cylinders' ,'cubicinches' ,'hp' ,'weightlbs','time-to-60','mpg']]
+df_consultas.insert(0, 'Target', '0')
+df_consultas['Target'] = np.where(df_consultas['mpg']>25, '1', '0')
+df_consultas.head()
+
+#agrupar dados de diferentes colunas no Dataframe do Pandas (exemplo com ano, mes, dia e hora em colunas separadas)
+df_consultas['coluna_agrupada'] =  df_consultas[['year','month','day','hour']].apply(lambda row: datetime.datetime(year=row['year'],month=row['month'],day=row['day'],hour=row['hour']), axis=1)
+
+#ordenar o dataframe a  partir de uma coluna
+df_consulta.sort_values('column', ascending=True, inplace=True)
+
+#Trabalhando com Séries Temporais
+
+#a leitura dos dados é feita através de importacao para dataframe do pandas
+#no exemplo dado em aula foram duas colunas (data do voo (Month), quantidade de passageiros (Passengers)) que foram importadas a partir de arquivo CSV para o dataframe dados_completos 
+
+#plotagem de gráfico de serie temporal
+plt.figure(figsize=(20, 10))
+g = sns.lineplot(x=dados_completos.index, y=dados_completos['column'])
+g.set_title('Gráfico de Série Temporal')
+g.set_xlabel('Indice')
+g.set_ylabel('column')
+
+#decomposição aditiva de série temporal
+#1 - aplica o modelo de decomposição aditiva
+decomposicao_aditiva = seasonal_decompose(df_serie_temporal, model='aditive',extrapolate_tend='freq') 
+#2 - realiza o plot da decomposição
+from pylab import rcParams
+rcParams['figure.figsize'] = 18, 8
+fig = decomposicao_aditiva.plot() #realiza o plot da decomposição
+plt.show()
+
+#testando a estacionariedade da serie temporal
+from statsmodels.tsa.stattools import adfuller # importa o teste ADF
+resultado_ADF = adfuller(df_serie_temporal.Column.values, autolag='AIC') #aplica o teste ADF na coluna (Column deve ser substituida pela coluna desejada)
+#para o teste ADF a hipotese nula é que existe, pelo menos, uma raiz negativa na serie temporal (série é não-etacionaria)
+print('ADF P-valor:' resultado_ADF[1]) #com o p-valor maior que 0,05 a hipotese nula não é rejeitada
+
+#retirando a tendendia da serie temporal
+detrended = df_serie_temporal - decomposicao_aditiva.trend
+plt.plot(detreded)
+
+#retirando a sazonalidade da serie temporal
+deseasonalized = df_serie_temporal - decomposicao_aditiva.seasonal
+plt.plot(deseasonalized)
+
+#realizando a analise de autocorrelação nos dados
+from statsmodels.graphics.tsaplots import plot_acf #importanto a biblioteca para o plot da autocorrelação
+plot_acf(df_serie_temporal, lags=50) #aplica a autocorrelação entre os dados
+plt.show() #mostra uma correlação significativa com 14 lags
+
+# transformando a seré não-estacionaria em estacionária
+df_serie_temporal['column_diff'] = df_serie_temporal['column'] - df_serie_temporal['column'].shift(1) #aplica o primeiro shift (derivada para tempo discreto)
+df_serie_temporal['column_diff'] = df_serie_temporal['column_diff'].dropna() #retira os valores nulos
+df_serie_temporal['column_diff'].plot()
+
+#conferindo se agora a  série está estacionaria
+X_diff = df_serie_temporal['column'].dropna().values
+resultado_primeira_diff = adfuller(X_diff)
+print('p-valor: %f' % resultado_primeira_diff[1]) #p-valor, praticamentoe 0,05, não rejeita a hipotese nula, mas vamos considerar que está estacionária
+
+#construindo uma rede neural recorrente para  séries  temporais
+import numpy
+import matplotlib.pyplot as plt
+import pandas
+import math
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import LSTM
+from sklearn,preprocessing import MinMaxScaler
+froim sklearn.metrics import mean_squared_error
+
+#volta o dataset para o formato original (array)
+serie_temporal = df_serie_temporal['column'].values
+
+#normalização do banco de dados, necessário para que os algoritmos posam ter um comportamento mais previsivel
+scaler = MinMaxScaler(feature_range=(0,1)) #cria o objeto que realiza a normalização dos dados por meio do calores minimos e maximos
+dataset = scaler.fit_transform(serie_temporal.reshape(-1,1)) #aplia a escala
+print(dataset[0:20])
+
+#divida o onjunto de dados em treinamento e teste
+train_size = int(len(dataset)*0.67) #encontra o valor maximo para o treinamento
+test_size = len(dataset) - train_size
+train, test = dataset[0:train_size,:], dataset[train_size:len(dataset),:]
+print(len(train), len(test)) #tamanho do df para treinamento e teste
+
+#cria a matriz necessária para a entrada de dados
+def create_dataset (dataset, look_back=1):
+	dataX,  dataY = [], []
+	from i in range(len(dataset)-look_back-1):
+		a = dataset[i:(i+look_back), 0]
+		dataX.append(a)
+		dataY.append(dataset[i + look_back, 0])
+	return numpy.array(dataX), numpy.array(dataY)
+	
+#cria o reshape para que os dados estejam em um formato ideal para entrada
+look_back = 14 #será utilizado apenas um passo anterior para a previsão do futuro
+trainX trainY = create_dataset(train, look_back)
+testX, testY = create_dataset(test, look_back)
+trainX = numpy.reshape(trainX, (trainX.shape[0], 1, trainX.shape[1]))
+testY = numpy.reshape(trainX, (testX.shape[0], 1, testX.shape[1]))
+trainX.shape
+
+#cria o modelo utilizando redes recorrentes e o LSTM
+model = Sequential()
+model.add(LSTM(4, input_shape=(1, look_back)))
+model.add(Dense(1))
+model.compile(loss='mean_squared_error', optimizer='adam')
+
+#apresenta a arquitetura da rede
+model.sumary()
+
+#realiza o treinamento do modelo de previsao
+model.fit(trainX, trainY, epochs=100, batch+size=1, verbose=2)
+
+#realiza as previsões
+trainPredict = model.predict(trainX)
+testPredict = model.predict(testX)
+
+#coloca os dados no formato original
+trainPredict = scaler.inverse_transform(trainPredict)
+trainY = scaler.inverse_transform([trainY])
+testPredict = scaler.inverse_transform(testPredict)
+testY = scaler.inverse_transform([testY])
+
+#realiza a mudança dos dados para previsão
+trainPredictPlot = numpy.empty_like(dataset)
+trainPredictPlot[:, :] = numpy.nan
+trainPredictPlot [look_back:len(trainPredict)+look_back, :] = trainPredict
+#shift para os dados de teste
+testPredictPlot = numpy.empty_like(dataset)
+testPredictPlot[:, :] = numpy.nan
+testPredictPlot [len(trainPredict)+(look_back*2)+1:len(dataset)-1, :] = testPredict
+
+#realiza o plot dos dados de previsão e o real
+plt.plot(scaler.inverse_transform(dataset),label='Dataset')
+plt_plot(trainPredictPlot, label='Treinamento')
+plt.plot(testPredictPlot, label='Previsao')
+plt.xlabel("Tempo")
+plt.ylabel("Numero de XX")
+plt.legend()
+plt.show()
+
+#construindo uma rede MLP para  séries  temporais
+		
+#preparando os dados de uma serie temporal para serem utilizados no modelo de previsão via MLP
+from sklearn.preprocessing import MinMaxScaler #para aplica a normalização dos dados
+scaler = MinMaxScaler(feature_range=(0, 1)) #define o intervalo de valor entre 0 e 1 para os dados a serem normalizados
+df_serie_temporal['column_normalizada'] = scaler.fit_transform(np.array(df_serie_temporal['column').reshape(-1, 1))
+
+#dividindo os dados entre treino e teste a partir de uma determinada data
+data_de_corte = datetime.datetime(year=2014, month=1, day=1, hour=0) #define a data de corte para 01/01/2014
+df_treinamento = df_serie_temporal.loc[df_serie_temporal['datetime']<data_de_corte]
+df_teste = df_serie_temporal.loc[df_serie_temporal['datetime']>=data_de_corte]
+print('Qtd dados para treinamento: ', df_treinamento.shape)
+print('Qtd dados para teste: ', df_teste.shape)
+
+#definindo o numero de valores  a serem utilizados para a previsão
+def formata_entrada_saida(serie_temporal_original, numero_de_passos):
+	X = []
+	y = []
+	for i in range(numero_de_passos, serie_temporal_original.shape[0]):
+		X.append(list(serie_temporal_original.loc[i-numero_de_passo:i-1]))
+		y.append(serie_temporal_original.loc[i])
+	X, y = np.array(X), np.array(y)
+	return X, y
+	
+#formata os dados para o treinamento do modelo
+X_train, y_train = formata_entrada_saida(df_treinamento['column_normalizada'], 10)
+print('Formato dos dados: ', X_train.shape, y_train.shape)
+
+#formata os dados para o teste do modelo
+X_test, y_test = formata_entrada_saida(df_teste['column_normalizada'].reset_index(drop=True),10)
+print('Formato dos dados: ', X_test.shape, y_test.shape)
+
+#inicia o processo e previsão via MLP
+
+#importando as bibliotecas
+import tensorflow as tf
+from tensor.flow.keras.layers import Dense, Input, Dropout #define os tipos de camadas a serem utilizadas pelo modelo
+from tensorflow.keras.optimizers import SGD #define o modelo de otimização via gradiente descendente
+
+#define a camada de entrada
+camada_entrada = Input(shape=(10,), dtype='float32')
+
+#adiciona as camadas escondidas (faz conexão entre as camadas)
+densa1 = Dense(32, activation='linear')(camada_entrada)
+densa2 = Dense(16, activation='linear')(densa1)
+densa3 = Dense(16, activation='linear')(densa2)
+
+#adiciona a camada de dropout como forma de regularização do modelo (ajuda a evitar overfiting)
+camada_dropout = Dropout(0.2)(densa3)
+
+#camada de saída da rede (1 dimensao, pois queremos prever a pressao atmosferica baseada em valores anteriores)
+camada_de_saida = Dense(1, activation='linear')(camada_dropout)
+
+#definindo o modelo MLP
+modelo_MLP = tf.keras.Model(inputs=camada_entrada, outputs_camada_de_saida)
+
+#mostrando as caracteristicas do modelo
+modelo_MLP.summary()
+
+#defininido a função de erro e o otimizador a ser utilizado
+modelo_MLP.compile(loss='mean_squered_error', optimizer='adam') #função perda MSE e otimizador de Adam
+modelo_MLP.fit(x=X_train, y=y_train, batch_size=16, epochs=20, verbose=1, shuffle=True) #treina o modelo
+
+#realiza a previsão com o modelo MLP
+previsao = modelo_MLP.predict(X_teste)
+previsao_Column = scaler.inverse_transform(previsao) #aplica o inverdo da transformação. Column deve ser substituido pelo nome da coluna da previsao
+previsao_Column.shape
+previsao_Column = np.squeeze(previsao_Column) #remove entradas de uma dimensão
+
+from sklearn.metrics import r2_score #importa o coeficiente de determinacao
+r2 = r2_score(df_teste['Column'].iloc[10:], previsao_Column)
+print ('Coeficiente de determinaçao para o tete (MLP): ', rount(r2,4))
+
+#plotando os valores reais x previstos
+plt.figura(figsize=7,7))
+plt.plot(range(50, df_teste['Column'].iloc[10:60, linestyle='-', marker='*', color='r')
+plt.plot(range(50), previsao_Column[:50], linestyle='-', marker='.', color='b')
+plt.legend(['Real','Previsto'], loc=2)
+plt.title('Valor Medido vs Valor Previsto)
+plt.ylabel('Valor Column')
+plt.xlabel('Indice')
+
+#inicia o processo e previsão via CNN
+
+from tensorflow.keras.layers import Flatten #camada flatten para transformar os dados em uma dimensão
+from tensorflow.keras.layers import ZeroPadding1D #completa os dados após a convolução
+from tensorflow.keras.layers import Conv1D #camada de convolução
+from tensorflow.keras.layers import AveragePooling1D #camada de redução (média dos dados encontrado)
+
+#define a camada de entrada
+camada_entrada = Input(shape=(10,1), dtype='float32')
+
+#adiciona a camada de padding
+camada_padding = ZeroPadding1D(padding=1)(camada_entrada) #mantem a quantidade de dados
+
+#adiciona a camada de convolução
+camada_convolucao_1D = Conv1D(64, 3, strides=1, use_bias=True)(camada_padding) #adiciona 64 filtros com uma janela de convolução = 3
+
+#camada de pooling
+camada_polling = AveragePooling1D(pool_size=3, strides=1)(camada_convolucao_1d) #reduz atraves do valor medio encontrado para a convolucao (pode ser também o valor maximo)
+
+#camada flatten
+camada_flatten = Flatten()(camada_polling) # utilizada para realizar o "reshape" dos dados para um vetor
+
+#adicionando a camada de dropout
+camada_dropout_cnn = Dropout(0.2)(cmamada_flatten)
+
+#camada de saída
+camada_saida = Dense(1, activation='linear')(camada_dropout_cnn)
+
+#construindo o modelo
+modelo_CNN = tf.keras.Model(inputs=camada_entrada, outputs=camada_saida)
+
+#mostrando o modelo
+modelo_CNN.summary()
+
+#adicionando a funcao perda e o otimizados
+modelo_CNN.compile(loss='mean_absolute_erros', optimizer='adam')
+
+#transforma os dados de treinamento e teste papra o 3D, pois a rede CNN exige essa transformacao
+X_train, X_teste = X_train.reshape((X_train.shape[0], X_train.shape[1], 1)), X_teste.reshape((X_teste.shape[0], X_teste.shape[1], 1))
+print('Formatos para o treinamento e teste: ', X_train. shape, X_teste.shape)
+
+#realizando o treinamento do modelo
+modelo_CNN.fit(x=X_train, y=Y_train, batch_size=16, epochs=20, verbose=1, shuffle=True)
+
+#previsao CNN
+previsao_cnn = modelo_CNN.predict(X_teste)
+Column_cnn = np.squeeze(scaler.inverse_transform(previsao_cnn))
+
+r2_cnn = r2_score(df_teste{'Column'}.iloc[10:], Column_cnn)
+print('Coeficiente de Determinação para o tete CNN: ', rount(r2, 4))
+
+#protando os calores reais x previstos
+plt.figure(figsize=(7,7))
+plt_plot(range(50), df_teste['Column'].iloc[10:60], linestyle='-', marker='*', color='r')
+plt_plot(range(50), Column_cnn[:50], linestyle='-', marker='.', color='b')
+plt.legend(['Real','Previsto'], loc=2)
+plt.title('Valor Medido vs Valor Previsto)
+plt.ylabel('Valor Column')
+plt.xlabel('Indice')
+
+
+###
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
